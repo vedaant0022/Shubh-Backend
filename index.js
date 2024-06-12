@@ -174,8 +174,8 @@ app.post('/creategroups', async (req, res) => {
 // Join an existing group
 app.put('/join', async (req, res) => {
   try {
-    const { Gname, members } = req.body;
-    const group = await GName.findOne({ Gname });
+    const { _id, members } = req.body;
+    const group = await GName.findOne({ _id });
 
     if (!group) {
       return res.status(404).json({ error: 'Group not found', status: false });
