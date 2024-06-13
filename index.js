@@ -180,6 +180,9 @@ app.put('/join', async (req, res) => {
     if (!group) {
       return res.status(404).json({ error: 'Group not found', status: false });
     }
+    if (group.members.includes(members)) {
+      return res.status(400).json({ error: 'Email already exists in the group', status: false });
+    }
     group.members.push(members);
     const updatedGroup = await group.save();
 
