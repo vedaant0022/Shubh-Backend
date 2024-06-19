@@ -131,7 +131,6 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 app.post('/upload', upload.single('image'), (req, res) => {
-  // File uploaded successfully
   console.log(req.body.file)
   res.status(200).json({
     message: 'File uploaded successfully',
@@ -198,13 +197,11 @@ app.get('/groups/:email', async (req, res) => {
   try {
     const { email } = req.params;
 
-    // Find the user by email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ error: 'Invalid user email' });
     }
 
-    // Find the groups where the user is a member
     const groups = await GName.find({ members: email });
 
     if (!groups.length) {
@@ -217,6 +214,90 @@ app.get('/groups/:email', async (req, res) => {
   }
 });
 
+// Admin Dashboard API
+
+app.get('/groups', async (req, res) => {
+  try {
+    const groups = await GName.find();
+    res.status(200).json(groups);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// All testing Demo API 
+const storage2 = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'public/Gphoto/');
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
+});
+const upload1 = multer({ storage: storage2 });
+
+
+app.post('/testgroup', upload1.single('Gphoto'), async (req, res) => {
+  try {
+    const { Gname, createdBy, photo } = req.body;
+    const Gphoto = req.file ? req.file.buffer : null;
+
+    const existingGroup = await GName.findOne({ Gname });
+    if (existingGroup) {
+      return res.status(400).json({ error: 'Group already exists', status: false });
+    }
+
+    const user = await User.findOne({ email: createdBy });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid user email', status: false });
+    }
+
+    const newGroup = new GName({
+      Gname,
+      Gphoto,
+      createdBy,
+      photo: photo ? JSON.parse(photo) : [],
+      members: [createdBy]
+    });
+
+    const savedGroup = await newGroup.save();
+
+    user.groups.push(savedGroup._id);
+    await user.save();
+
+    res.status(201).json({ group: savedGroup, status: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message, status: false });
+  }
+});
+
+app.get('/test/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ error: 'Invalid user email' });
+    }
+
+    // Find groups where the user's email is in the members array
+    const groups = await GName.find({ members: email });
+
+    if (!groups.length) {
+      return res.status(404).json({ error: 'No groups found for this user' });
+    }
+
+    // Prepare an array of group IDs to populate Gphoto field
+    const groupIds = groups.map(group => group._id);
+
+    // Populate the Gphoto field in each group document
+    const populatedGroups = await GName.find({ _id: { $in: groupIds } }).populate('Gphoto').exec();
+
+    res.status(200).json(populatedGroups);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 
 
@@ -245,56 +326,6 @@ app.listen(port,()=>{
 
 
 
-// app.post('/sendOTP', async (req, res) => {
-//   try {
-//     const { email } = req.body;
-//     const OTP = Math.floor(100000 + Math.random() * 900000).toString(); // Generate a 6-digit OTP
-//     const mailOptions = {
-//       from: 'anuragma807@gmail.com',
-//       to: email,
-//       subject: 'Your OTP for authentication',
-//       text: `Your OTP is: ${OTP}`
-//     };
-//     await transporter.sendMail(mailOptions);
-
-//     // Assuming user information is stored in req.user after authentication
-//     // Check if req.user is defined and contains user information
-//     if (!req.user || !req.user._id) {
-//       return res.status(401).json({ message: 'Unauthorized' });
-//     }
-
-//     // Store the OTP in the database
-//     const userOTP = new UserOTP({ user: req.user._id, OTP }); // Corrected req.User to req.user
-//     await userOTP.save();
-
-//     res.status(200).json({ message: 'OTP sent successfully' });
-//   } catch (error) {
-//     console.error(error);
-//     res.status(500).json({ message: 'Internal server error' });
-//   }
-// });
-
-
-
-
-
-
-
-// Retrieve Groups
-// app.get('/users/:id/groups', async (req, res) => {
-//   try {
-//     const userId = req.params.id;
-
-//     const user = await User.findById(userId).populate('groups');
-//     if (!user) {
-//       return res.status(404).json({ error: 'User not found' });
-//     }
-
-//     res.status(200).json(user.groups);
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
 
 
 
@@ -313,112 +344,3 @@ app.listen(port,()=>{
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//   //Login 
-
-//   app.post('/login', async (req, res) => {
-//     try {
-//       const user = await Registration.findOne({ username: req.body.username.toLowerCase() });
-  
-//       if (!user || user.password !== req.body.password.toLowerCase()) {
-//         return res.status(401).json({ message: 'Invalid username or password' });
-//       }
-//       res.json({ message: 'User authenticated successfully' });
-//     } catch (error) {
-//       res.status(500).json({ message: error.message });
-//     }
-//   });
-
-
-// app.post('/todos', async (req, res) => {
-//     try {
-//       const newTodo = new Todo(req.body);
-//       const savedTodo = await newTodo.save();
-//       res.status(201).json(savedTodo);
-//     } catch (error) {
-//       res.status(400).json({ message: error.message });
-//     }
-//   });
-  
-//   app.get('/todos', async (req, res) => {
-//     try {
-//       const todos = await Todo.find();
-//       res.json(todos);
-//     } catch (error) {
-//       res.status(500).json({ message: error.message });
-//     }
-//   });
-
-// app.delete('/todos/delete/:title', async (req, res) => {
-//     try {
-//       const result = await Todo.deleteOne({ id: req.params.id });
-  
-//       if (result.deletedCount === 0) {
-//         res.status(404).json({ message: 'Todo not found' });
-//       } else {
-//         res.status(200).json({ message: 'Todo successfully deleted' });
-//       }
-//     } catch (error) {
-//       res.status(500).json({ message: error.message });
-//     }
-//   });
-
-// app.put('/todos/update/:title', async (req, res) => {
-//     try {
-//       const updatedTodo = await Todo.findOneAndUpdate(
-//         { id: req.params.id }, 
-//         req.body,
-//         {
-//           new: true, 
-//           runValidators: true 
-//         }
-//       );
-  
-//       if (updatedTodo) {
-//         res.json(updatedTodo);
-//       } else {
-//         res.status(404).json({ message: 'Todo with the given title not found' });
-//       }
-//     } catch (error) {
-//       res.status(400).json({ message: error.message });
-//     }
-//   });
-  
-//   // Contact form
-//   app.post('/contacts', async (req, res) => {
-//     try {
-//       const contact = new Contact(req.body);
-//       await contact.save();
-//       res.status(201).send(contact);
-//     } catch (error) {
-//       console.error('Error creating contact:', error.message);
-//       res.status(400).send({ error: error.message });
-//     }
-//   });
-
-//   // email
-//   app.post('/emails', async (req, res) => {
-//     try {
-//       const email = new Emails(req.body);
-//       await email.save();
-//       res.status(201).send(email);
-//     } catch (error) {
-//       console.error('Error creating email entry:', error.message);
-//       res.status(400).send({ error: error.message });
-//     }
-//   });

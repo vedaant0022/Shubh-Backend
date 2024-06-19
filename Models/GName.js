@@ -6,6 +6,9 @@ const G_NameSchema = new mongoose.Schema({
     unique: true, 
     required: true, 
   },
+  Gphoto: {
+    type: Buffer
+  },
   createdBy: {
     type: String, 
     required: true
@@ -16,6 +19,6 @@ const G_NameSchema = new mongoose.Schema({
   members: [{
     type: String 
   }]
-});
+},{ timestamps: true });
 
 module.exports = mongoose.model('GName', G_NameSchema);
