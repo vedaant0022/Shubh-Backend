@@ -12,6 +12,7 @@ const { users } = require('moongose/models');
 const User = require('./Models/User');
 const GName = require('./Models/GName');
 const Otp = require('./Models/UserOTP');
+const AdminAuth = require('./Models/AdminAuth');
 
 
 const dburl = process.env.MONGOURL;
@@ -224,6 +225,42 @@ app.get('/groups', async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 });
+
+// Admin Create User
+app.post('/admins', async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+    
+    const newAdmin = new AdminAuth({
+      name,
+      email,
+      password
+    });
+
+    await newAdmin.save();
+    res.status(201).json(newAdmin);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Admin Authentication
+app.post('/Adminauth', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    const admin = await AdminAuth.findOne({ email });
+    if (!admin) {
+      return res.status(404).json({ message: 'Admin not found' });
+    }
+    if (admin.password !== password) {
+      return res.status(401).json({ message: 'Invalid credentials' });
+    }
+    res.status(200).json({ message: 'Authentication successful', admin });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // All testing Demo API 
 const storage2 = multer.diskStorage({
