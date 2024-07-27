@@ -19,7 +19,7 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  phoneNumber: {
+  phone: {
     type: String,
     trim: true,
     match: [/^\d{10}$/, 'Please enter a valid phone number']
@@ -27,7 +27,11 @@ const userSchema = new mongoose.Schema({
   groups: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'GName'
-  }]
+  }],
+  image:{
+    type: String
+  },
+
   
 }, { timestamps: true });
 

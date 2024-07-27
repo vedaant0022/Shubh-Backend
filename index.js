@@ -13,6 +13,7 @@ const User = require('./Models/User');
 const GName = require('./Models/GName');
 const Otp = require('./Models/UserOTP');
 const AdminAuth = require('./Models/AdminAuth');
+const cloudinary = require('cloudinary').v2;
 
 
 const dburl = process.env.MONGOURL;
@@ -38,8 +39,8 @@ const transporter = nodemailer.createTransport({
 });
 
 // Includes Register, SendOTP, and Save Otp
-app.post('/test', async (req, res) => {
-  const { username, email, password, phoneNumber } = req.body;
+app.post('/signup', async (req, res) => {
+  const { username, email, password, phone, image } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: 'Email and password are required.' });
@@ -52,11 +53,9 @@ app.post('/test', async (req, res) => {
       return res.status(400).json({ error: 'Email already exists.' });
     }
 
-    // Register the new user
-    const newUser = new User({ username, email, password, phoneNumber });
+    const newUser = new User({ username, email, password, phone, image });
     await newUser.save();
 
-    // Generate OTP
     const OTP = Math.floor(1000 + Math.random() * 9000).toString();
     const otpEntry = new Otp({ email, otp: OTP });
     await otpEntry.save();
@@ -88,7 +87,14 @@ app.post('/test', async (req, res) => {
       }
   
       if (password === user.password) {
-        res.status(200).json({ message: 'Authentication successful' ,"status":"ok", "email":email,"password":password});
+        res.status(200).json({ 
+          message: 'Authentication successful',
+          status: "ok",
+          username: user.username,
+          email: user.email,
+          phoneNumber: user.phone,
+          image: user.image
+        });
       } else {
         res.status(401).json({ message: 'Please Enter correct Email or Password' , "status":"invalid"});
       }
@@ -122,7 +128,7 @@ app.post('/authenticateOTP', async (req, res) => {
 // 1. Storage configuration
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'public/');
+    cb(null, 'public/ProfilePicture');
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname));
@@ -131,7 +137,7 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage: storage });
 
-app.post('/upload', upload.single('image'), (req, res) => {
+app.post('/Profile', upload.single('image'), (req, res) => {
   console.log(req.body.file)
   res.status(200).json({
     message: 'File uploaded successfully',
@@ -141,35 +147,35 @@ app.post('/upload', upload.single('image'), (req, res) => {
 });
 
 // Create group 
-app.post('/creategroups', async (req, res) => {
-  try {
-    const { Gname, createdBy, photo } = req.body;
+// app.post('/creategroups', async (req, res) => {
+//   try {
+//     const { Gname, createdBy, photo } = req.body;
 
-    const existingGroup = await GName.findOne({ Gname });
-    if (existingGroup) {
-      return res.status(400).json({ error: 'Group already exists', status: false });
-    }
+//     const existingGroup = await GName.findOne({ Gname });
+//     if (existingGroup) {
+//       return res.status(400).json({ error: 'Group already exists', status: false });
+//     }
 
-    const user = await User.findOne({ email: createdBy });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid user email' });
-    }
+//     const user = await User.findOne({ email: createdBy });
+//     if (!user) {
+//       return res.status(400).json({ error: 'Invalid user email' });
+//     }
 
-    const newGroup = new GName({
-      Gname,
-      createdBy,
-      photo,
-      members: [createdBy] 
-    });
+//     const newGroup = new GName({
+//       Gname,
+//       createdBy,
+//       photo,
+//       members: [createdBy] 
+//     });
 
-    const savedGroup = await newGroup.save();
-    user.groups.push(savedGroup._id);
-    await user.save();
-    res.status(201).json(savedGroup);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+//     const savedGroup = await newGroup.save();
+//     user.groups.push(savedGroup._id);
+//     await user.save();
+//     res.status(201).json(savedGroup);
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
 
 // Join an existing group
 app.put('/join', async (req, res) => {
@@ -262,7 +268,7 @@ app.post('/Adminauth', async (req, res) => {
 });
 
 
-// All testing Demo API 
+// Create Group using multer to upload files 
 const storage2 = multer.diskStorage({
   destination: function (req, file, cb) {
     cb(null, 'public/Gphoto/');
@@ -274,7 +280,7 @@ const storage2 = multer.diskStorage({
 const upload1 = multer({ storage: storage2 });
 
 
-app.post('/testgroup', upload1.single('Gphoto'), async (req, res) => {
+app.post('/creategroup', upload1.single('Gphoto'), async (req, res) => {
   try {
     const { Gname, createdBy, photo } = req.body;
     const Gphoto = req.file ? req.file.buffer : null;
@@ -307,6 +313,8 @@ app.post('/testgroup', upload1.single('Gphoto'), async (req, res) => {
     res.status(500).json({ error: error.message, status: false });
   }
 });
+
+
 
 app.get('/test/:email', async (req, res) => {
   try {

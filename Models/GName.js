@@ -7,7 +7,7 @@ const G_NameSchema = new mongoose.Schema({
     required: true, 
   },
   Gphoto: {
-    type: Buffer
+    type: String
   },
   createdBy: {
     type: String, 
